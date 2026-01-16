@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>NXTgame - Enhanced</title>
+    <meta name="apple-mobile-web-app-title" content="NXTgame">
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#009B9E">
+    <link rel="apple-touch-icon" href="icon.png">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    
+    <script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+    <header class="glass-header">
+        <a href="https://www.nxt.reutlingen-university.de/" target="_blank" class="brand-link">
+            <img src="NXT_Titel.png" alt="NXT" class="brand-logo">
+        </a>
+        <button id="menu-btn" class="icon-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </button>
+    </header>
+
+    <div id="side-menu-overlay" class="menu-overlay"></div>
+    <nav id="side-menu" class="glass-menu">
+        <div class="menu-content">
+            <h3 class="menu-title">MENÜ - ENHANCED</h3>
+            <button class="menu-item active" data-target="view-setup">Startseite</button>
+            <button class="menu-item" data-target="view-share">Teilen (QR)</button>
+            <button class="menu-item" data-target="view-instructions">Anleitung</button>
+            <button class="menu-item" data-target="view-history">Verlauf</button>
+            <button class="menu-item" data-target="view-insights">Insights</button>
+            <div class="menu-footer">NXT Reutlingen v17.1 - Enhanced Detection</div>
+        </div>
+    </nav>
+
+    <button id="fab-home" class="fab-btn hidden">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+    </button>
+
+    <section id="view-setup" class="view active-view">
+        <div class="center-content">
+            <div class="glass-card lobby-card">
+                <h2>NEUES SPIEL</h2>
+                <div class="improvements-notice">
+                    ✨ <strong>Verbesserte Erkennung:</strong><br>
+                    • Hexagon-Form-Validierung<br>
+                    • Größen- und Formfilter<br>
+                    • Stabilere Bretterkennung<br>
+                    • Optional: Template-Matching
+                </div>
+                <div class="lobby-header">
+                    <span class="subtitle">Spieler & Farben</span>
+                    <div class="player-controls">
+                        <button id="remove-player-btn" class="ctrl-btn" disabled>−</button>
+                        <span id="player-count-display">2</span>
+                        <button id="add-player-btn" class="ctrl-btn">+</button>
+                    </div>
+                </div>
+                
+                <div id="players-container" class="players-list"></div>
+
+                <div class="random-starter-section">
+                    <button id="random-start-btn" class="secondary-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 8h.01"></path><path d="M8 8h.01"></path><path d="M8 16h.01"></path><path d="M16 16h.01"></path><path d="M12 12h.01"></path></svg>
+                        Wer fängt an?
+                    </button>
+                    <div id="random-result" class="random-result hidden"></div>
+                </div>
+
+                <button id="start-game-btn" class="primary-btn big-btn">
+                    STARTEN
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section id="view-game" class="view">
+        <div id="camera-container">
+            <div class="camera-hex-wrapper">
+                <video id="video" playsinline autoplay muted></video>
+                <canvas id="canvas" style="display:none;"></canvas>
+                
+                <div class="tech-frame-container">
+                    <div class="tech-corner tl"></div>
+                    <div class="tech-corner tr"></div>
+                    <div class="tech-corner bl"></div>
+                    <div class="tech-corner br"></div>
+                </div>
+
+                <div id="lock-overlay" class="lock-overlay hidden"></div>
+                <div id="scan-line" class="scan-overlay hidden"></div>
+            </div>
+            <div id="instruction-text" class="instruction-badge">📐 Suche Hexagon-Spielfeld...</div>
+        </div>
+
+        <div id="controls-sheet" class="glass-sheet hidden">
+            <div id="result-display" class="fade-in">
+                <div class="result-header">
+                    <h2 id="winner-msg">Analysiere...</h2>
+                    <div id="status-pill" class="status-saved">Gespeichert ✅</div>
+                </div>
+                <div id="score-list" class="ranking-list"></div>
+                <div class="button-group">
+                    <button id="next-game-btn" class="primary-btn action-main-btn">NEUES SPIEL</button>
+                </div>
+                <button id="retry-btn" class="text-btn" style="margin-top:10px; width:100%">Messung wiederholen</button>
+            </div>
+        </div>
+    </section>
+
+    <section id="view-share" class="view view-scroll">
+        <div class="center-content">
+            <div class="glass-card lobby-card">
+                <h2>APP TEILEN</h2>
+                <div class="qr-display-wrapper">
+                    <img src="qrcode.png" alt="QR Code" class="static-qr" onerror="this.style.display='none';this.parentElement.innerText='Bild fehlt.'">
+                </div>
+                <p style="margin-top:20px; font-size:0.9rem; color:#666;">Scanne diesen Code, um die App zu öffnen.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="view-instructions" class="view view-scroll">
+        <div class="content-padding">
+            <h2>ANLEITUNG - ENHANCED</h2>
+            <div class="glass-card">
+                <h3>✨ Neue Erkennung</h3>
+                <p><strong>Hexagon-Erkennung:</strong> Die App erkennt jetzt präzise die sechseckige Form des Spielbretts und ignoriert andere Objekte.</p>
+            </div>
+            <div class="glass-card">
+                <h3>Das Spielfeld</h3>
+                <p>Die App erkennt automatisch das große Sechseck. Halte das Brett so, dass es sich gut vom Hintergrund abhebt. Die neue Erkennung ist viel genauer!</p>
+            </div>
+            <div class="glass-card">
+                <h3>Die KI</h3>
+                <p>Gummibänder (Linien) werden ignoriert. Nur die farbigen Figuren werden gezählt.</p>
+            </div>
+            <div class="glass-card">
+                <h3>🔧 Technische Verbesserungen</h3>
+                <ul>
+                    <li><strong>Form-Validierung:</strong> Prüft ob Objekt wirklich ein Hexagon ist</li>
+                    <li><strong>Größenfilter:</strong> Ignoriert zu kleine/große Objekte</li>
+                    <li><strong>Stabilität:</strong> Mehrfache Bestätigung vor Analyse</li>
+                    <li><strong>Template-Matching:</strong> Optional mit Referenzbild</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section id="view-history" class="view view-scroll">
+        <div class="content-padding">
+            <div class="header-row">
+                <h2>VERLAUF</h2>
+                <button id="delete-btn" class="text-btn-danger">Leeren</button>
+            </div>
+            <div id="history-list" class="glass-list">
+                <div class="empty-state">Keine Daten</div>
+            </div>
+        </div>
+    </section>
+
+    <section id="view-insights" class="view view-scroll">
+        <div class="content-padding">
+            <h2>INSIGHTS</h2>
+            <div class="glass-card highlight-card">
+                <h3>Fakultät NXT</h3>
+                <a href="https://www.nxt.reutlingen-university.de/" target="_blank" class="link-btn">Zur Website →</a>
+            </div>
+            <div class="glass-card">
+                <h3>🚀 Verbesserungsvorschläge</h3>
+                <h4>1. Weitere Optimierungen:</h4>
+                <ul>
+                    <li><strong>Referenzbild hinzufügen:</strong> Das "reference_board.png" ist bereits integriert</li>
+                    <li><strong>Lichtbedingungen:</strong> Bessere Anpassung an verschiedene Beleuchtung</li>
+                    <li><strong>Kamera-Kalibrierung:</strong> Für noch präzisere Erkennung</li>
+                </ul>
+                <h4>2. UI/UX Verbesserungen:</h4>
+                <ul>
+                    <li><strong>Debug-Modus:</strong> Zeige erkannte Konturen zur Fehlerbehebung</li>
+                    <li><strong>Validierungsanzeige:</strong> Zeige warum ein Board abgelehnt wurde</li>
+                    <li><strong>Feinabstimmung:</strong> Einstellungen für Erkennungsparameter</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <div id="install-modal" class="install-modal hidden">
+        <div class="install-content glass-card">
+            <button id="close-install" class="close-icon-btn">×</button>
+            <div class="install-icon">📲</div>
+            <h3>App installieren</h3>
+            <div id="install-instructions"></div>
+            <button id="install-dismiss-btn" class="primary-btn" style="margin-top:20px;">Verstanden</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
